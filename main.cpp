@@ -129,10 +129,10 @@ int WINAPI WinMain(
             }
         }
 
-        uint32_t TrianglesColor[] = {
-            0xffffff00,
-            0xff00ffff,
-            0xffff00ff,
+        Vec3 TrianglesColor[] = {
+            Vec3::create(1.0f, 0.0f, 0.0f), // red
+            Vec3::create(0.0f, 1.0f, 0.0f), // green
+            Vec3::create(0.0f, 0.0f, 1.0f)  // blue
         };
 
         for (int32_t TriangleId = 9; TriangleId >= 0; --TriangleId) {
@@ -152,7 +152,7 @@ int WINAPI WinMain(
 
             DrawTriangle(
                 Points,
-                TrianglesColor[TriangleId % (sizeof(TrianglesColor) / sizeof(TrianglesColor[0]))],
+                TrianglesColor,
                 GlobalState.FrameBufferPixels,
                 GlobalState.FrameBufferWidth,
                 GlobalState.FrameBufferHeight

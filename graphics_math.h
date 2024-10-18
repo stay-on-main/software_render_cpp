@@ -22,4 +22,4 @@ class Vec3 {
 Vec3 operator+(Vec3 A, Vec3 B);
 
 Vec2 ProjectPoint(Vec3 Pos, uint32_t Width, uint32_t Height);
-void DrawTriangle(Vec3 *Points, uint32_t Color, uint32_t *Pixels, uint32_t Width, uint32_t Height);
+void DrawTriangle(Vec3 *Points, Vec3 *Color, uint32_t *Pixels, uint32_t Width, uint32_t Height);

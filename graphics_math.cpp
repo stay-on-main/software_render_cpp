@@ -68,7 +68,13 @@ float CrossProduct2d(Vec2 A, Vec2 B)
     return A.x * B.y - A.y * B.x;
 }
 
-void DrawTriangle(Vec3 *Points, Vec3 *Color, uint32_t *Pixels, uint32_t Width, uint32_t Height)
+void DrawTriangle(
+    Vec3 *Points,
+    Vec3 *Color,
+    uint32_t *Pixels,
+    uint32_t Width,
+    uint32_t Height,
+    float *DepthBuffer)
 {
     Vec2 PointA = ProjectPoint(Points[0], Width, Height);
     Vec2 PointB = ProjectPoint(Points[1], Width, Height);
@@ -119,12 +125,21 @@ void DrawTriangle(Vec3 *Points, Vec3 *Color, uint32_t *Pixels, uint32_t Width, u
                 float T1 = - CrossLength2 / BaryCentricDiv;
                 float T2 = - CrossLength0 / BaryCentricDiv;
 
-                Vec3 FinalColor = T0 * Color[0] + T1 * Color[1] + T2 * Color[2];
-                uint8_t r = FinalColor.x * 255.0f;
-                uint8_t g = FinalColor.y * 255.0f;
-                uint8_t b = FinalColor.z * 255.0f;
-                uint32_t FinalColorU32 = (0xff << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | ((uint32_t)b);
-                Pixels[PixelId] = FinalColorU32;
+                float Depth = T0 * (1.0f / Points[0].z) +
+                              T1 * (1.0f / Points[1].z) +
+                              T2 * (1.0f / Points[2].z); 
+                Depth = 1.0f / Depth;
+
+                if (Depth < DepthBuffer[PixelId]) {
+                    DepthBuffer[PixelId] = Depth;
+
+                    Vec3 FinalColor = T0 * Color[0] + T1 * Color[1] + T2 * Color[2];
+                    uint8_t r = FinalColor.x * 255.0f;
+                    uint8_t g = FinalColor.y * 255.0f;
+                    uint8_t b = FinalColor.z * 255.0f;
+                    uint32_t FinalColorU32 = (0xff << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | ((uint32_t)b);
+                    Pixels[PixelId] = FinalColorU32;
+                }
             }
         }
     }

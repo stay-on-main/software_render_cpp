@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cfloat>
 #include <Windows.h>
 #include "graphics_math.h"
 
@@ -11,6 +12,7 @@ typedef struct {
     UINT32 FrameBufferWidth;
     UINT32 FrameBufferHeight;
     UINT32 *FrameBufferPixels;
+    float *DepthBuffer;
     float CurrAngle;
 } global_state;
 
@@ -89,6 +91,7 @@ int WINAPI WinMain(
         GlobalState.FrameBufferHeight = ClientRect.bottom - ClientRect.top;
         UINT32 BuffSize = GlobalState.FrameBufferWidth * GlobalState.FrameBufferHeight;
         GlobalState.FrameBufferPixels = new UINT32[BuffSize];
+        GlobalState.DepthBuffer = new float[BuffSize];
     }
 
     LARGE_INTEGER BeginTime = {};
@@ -126,15 +129,52 @@ int WINAPI WinMain(
 
                 GlobalState.FrameBufferPixels[PixelId] = ((UINT32)Alpha << 24) | ((UINT32)Red << 16) | 
                                                          ((UINT32)Green << 8) | (UINT32)Blue;
+
+                GlobalState.DepthBuffer[PixelId] = FLT_MAX;
             }
         }
 
-        Vec3 TrianglesColor[] = {
+        Vec3 Position1[] = {
+            Vec3::create(0.0f, 0.5f, 1.0f),
+            Vec3::create(0.5f, -0.5f, 1.0f),
+            Vec3::create(-0.5f, -0.5f, 1.0f),
+        };
+
+        Vec3 Colors1[] = {
             Vec3::create(1.0f, 0.0f, 0.0f), // red
             Vec3::create(0.0f, 1.0f, 0.0f), // green
             Vec3::create(0.0f, 0.0f, 1.0f)  // blue
         };
 
+        Vec3 Position2[] = {
+            Vec3::create(0.0f, 0.5f, 1.0f),
+            Vec3::create(0.5f, -0.5f, 1.2f),
+            Vec3::create(-0.5f, -0.5f, 0.8f),
+        };
+
+        Vec3 Colors2[] = {
+            Vec3::create(1.0f, 0.0f, 0.0f), // red
+            Vec3::create(0.0f, 1.0f, 0.0f), // green
+            Vec3::create(0.0f, 0.0f, 1.0f)  // blue
+        };
+
+        DrawTriangle(
+            Position1,
+            Colors1,
+            GlobalState.FrameBufferPixels,
+            GlobalState.FrameBufferWidth,
+            GlobalState.FrameBufferHeight,
+            GlobalState.DepthBuffer
+        );
+        DrawTriangle(
+            Position2,
+            Colors2,
+            GlobalState.FrameBufferPixels,
+            GlobalState.FrameBufferWidth,
+            GlobalState.FrameBufferHeight,
+            GlobalState.DepthBuffer
+        );
+#if 0
         for (int32_t TriangleId = 9; TriangleId >= 0; --TriangleId) {
             float Depth = powf(2, TriangleId + 1);
 
@@ -155,10 +195,11 @@ int WINAPI WinMain(
                 TrianglesColor,
                 GlobalState.FrameBufferPixels,
                 GlobalState.FrameBufferWidth,
-                GlobalState.FrameBufferHeight
+                GlobalState.FrameBufferHeight,
+                GlobalState.DepthBuffer
             );
         }
-
+#endif
         GlobalState.CurrAngle += FrameTime;
         
         if (GlobalState.CurrAngle >= 2 * PI_32) {

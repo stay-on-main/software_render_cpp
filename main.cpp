@@ -134,76 +134,77 @@ int WINAPI WinMain(
             }
         }
 
-        Vec3 Position1[] = {
-            Vec3::create(0.0f, 0.5f, 1.0f),
-            Vec3::create(0.5f, -0.5f, 1.0f),
-            Vec3::create(-0.5f, -0.5f, 1.0f),
-        };
-
-        Vec3 Colors1[] = {
-            Vec3::create(1.0f, 0.0f, 0.0f), // red
-            Vec3::create(0.0f, 1.0f, 0.0f), // green
-            Vec3::create(0.0f, 0.0f, 1.0f)  // blue
-        };
-
-        Vec3 Position2[] = {
-            Vec3::create(0.0f, 0.5f, 1.0f),
-            Vec3::create(0.5f, -0.5f, 1.2f),
-            Vec3::create(-0.5f, -0.5f, 0.8f),
-        };
-
-        Vec3 Colors2[] = {
-            Vec3::create(1.0f, 0.0f, 0.0f), // red
-            Vec3::create(0.0f, 1.0f, 0.0f), // green
-            Vec3::create(0.0f, 0.0f, 1.0f)  // blue
-        };
-
-        DrawTriangle(
-            Position1,
-            Colors1,
-            GlobalState.FrameBufferPixels,
-            GlobalState.FrameBufferWidth,
-            GlobalState.FrameBufferHeight,
-            GlobalState.DepthBuffer
-        );
-        DrawTriangle(
-            Position2,
-            Colors2,
-            GlobalState.FrameBufferPixels,
-            GlobalState.FrameBufferWidth,
-            GlobalState.FrameBufferHeight,
-            GlobalState.DepthBuffer
-        );
-#if 0
-        for (int32_t TriangleId = 9; TriangleId >= 0; --TriangleId) {
-            float Depth = powf(2, TriangleId + 1);
-
-            Vec3 Points[3] = {
-                Vec3::create(-1.0f, -0.5f, Depth),
-                Vec3::create(0.0f, 0.5f, Depth),
-                Vec3::create(1.0f, -0.5f, Depth)
-                
-            };
-            
-            for (uint32_t PointId = 0; PointId  < sizeof(Points) / sizeof(Points[0]); ++PointId) {
-                Vec3 ShiftedPoint = Points[PointId] + Vec3::create(cosf(GlobalState.CurrAngle), sinf(GlobalState.CurrAngle), 0.0f);
-                Points[PointId] = ShiftedPoint;
-            }
-
-            DrawTriangle(
-                Points,
-                TrianglesColor,
-                GlobalState.FrameBufferPixels,
-                GlobalState.FrameBufferWidth,
-                GlobalState.FrameBufferHeight,
-                GlobalState.DepthBuffer
-            );
-        }
-#endif
         GlobalState.CurrAngle += FrameTime;
         
         if (GlobalState.CurrAngle >= 2 * PI_32) {
             GlobalState.CurrAngle -= 2 * PI_32;
+        }
+
+        Vec3 ModelVertices[] = {
+            // Front face
+            Vec3::Create(-0.5f, -0.5f, -0.5f),
+            Vec3::Create(-0.5f, 0.5f, -0.5f),
+            Vec3::Create(0.5f, 0.5f, -0.5f),
+            Vec3::Create(0.5f, -0.5f, -0.5f),
+            // Back face
+            Vec3::Create(-0.5f, -0.5f, 0.5f),
+            Vec3::Create(-0.5f, 0.5f, 0.5f),
+            Vec3::Create(0.5f, 0.5f, 0.5f),
+            Vec3::Create(0.5f, -0.5f, 0.5f),
+        };
+
+        Vec3 ModelColors[] = {
+            Vec3::Create(1, 0, 0),
+            Vec3::Create(0, 1, 0),
+            Vec3::Create(0, 0, 1),
+            Vec3::Create(1, 0, 1),
+
+            Vec3::Create(1, 1, 0),
+            Vec3::Create(0, 1, 1),
+            Vec3::Create(1, 0, 0),
+            Vec3::Create(1, 1, 1),
+        };
+
+        uint32_t ModelIndexes[] = {
+            // Front face
+            0, 1, 2,
+            2, 3, 0,
+        //    // Back face
+            6, 5, 4,
+            4, 7, 6,
+        //    // Left face
+            4, 5, 1,
+            1, 0, 4,
+            // Right face
+            3, 2, 6,
+            6, 7, 3,
+            // Top face
+            1, 5, 6,
+            6, 2, 1,
+            // Bottom face
+            4, 0, 3,
+            3, 7, 4
+        };
+
+        float Offset = GlobalState.CurrAngle;
+        Mat4 Transform = Mat4::TranslationMatrix(0.0f, 0.0f, 4.0f) *
+                         Mat4::RotationMatrix(Offset, Offset, Offset) *
+                         Mat4::ScaleMatrix(1.0f, 1.0f, 1.0f);
+
+        for (uint32_t IndexId = 0; IndexId < sizeof(ModelIndexes) / sizeof(ModelIndexes[0]); IndexId += 3) {
+            uint32_t Index0 = ModelIndexes[IndexId + 0];
+            uint32_t Index1 = ModelIndexes[IndexId + 1];
+            uint32_t Index2 = ModelIndexes[IndexId + 2];
+
+            DrawTriangle(
+                ModelVertices[Index0], ModelVertices[Index1], ModelVertices[Index2],
+                ModelColors[Index0], ModelColors[Index1], ModelColors[Index2],
+                GlobalState.FrameBufferPixels,
+                GlobalState.FrameBufferWidth,
+                GlobalState.FrameBufferHeight,
+                GlobalState.DepthBuffer,
+                Transform
+            );
         }
 
         RECT ClientRect = {};

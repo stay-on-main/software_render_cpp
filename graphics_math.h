@@ -17,6 +17,7 @@ class Vec3 {
         float z;
 
         static Vec3 Create(float x, float y, float z);
+        Vec3 Normalize();
 };
 
 class Vec4 {
@@ -38,11 +39,23 @@ class Mat4 {
         static Mat4 Identity();
         static Mat4 ScaleMatrix(float x, float y, float z);
         static Mat4 TranslationMatrix(float x, float y, float z);
+        static Mat4 TranslationMatrixFromVec3(Vec3 V);
         static Mat4 RotationMatrix(float x, float y, float z);
 };
 
+Vec2 operator-(Vec2 A, Vec2 B);
+
 Vec3 operator+(Vec3 A, Vec3 B);
+Vec3 operator-(Vec3 A, Vec3 B);
+Vec3 operator+=(Vec3 &A, Vec3 B);
+Vec3 operator-=(Vec3 &A, Vec3 B);
+Vec3 operator-(Vec3 A);
+
+Vec3 operator*(Vec3 A, float B);
+Vec3 operator/(Vec3 A, float B);
+
 Mat4 operator*(Mat4 A, Mat4 B);
+Vec4 operator*(Mat4 A, Vec4 B);
 
 Vec2 ProjectPoint(Vec3 Pos, uint32_t Width, uint32_t Height);
 void DrawTriangle(

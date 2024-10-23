@@ -42,9 +42,25 @@ Vec3 Vec3::Create(float x, float y, float z) {
     return v;
 }
 
+Vec3 Vec3::Normalize()
+{
+    float Len = sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
+    return Vec3::Create(this->x, this->y, this->z) / Len;
+}
+
 Vec3 operator+(Vec3 A, Vec3 B)
 {
     return Vec3::Create(A.x + B.x, A.y + B.y, A.z + B.z);
+}
+
+Vec3 operator-(Vec3 A, Vec3 B)
+{
+    return Vec3::Create(A.x - B.x, A.y - B.y, A.z - B.z);
+}
+
+Vec3 operator-(Vec3 A)
+{
+    return Vec3::Create(-A.x, -A.y, -A.z);
 }
 
 Vec3 operator*(float A, Vec3 B)
@@ -55,6 +71,23 @@ Vec3 operator*(float A, Vec3 B)
 Vec3 operator*(Vec3 A, float B)
 {
     return Vec3::Create(A.x * B, A.y * B, A.z * B);
+}
+
+Vec3 operator/(Vec3 A, float B)
+{
+    return Vec3::Create(A.x / B, A.y / B, A.z / B);
+}
+
+Vec3 operator+=(Vec3 &A, Vec3 B)
+{
+    A = A + B;
+    return A;
+}
+
+Vec3 operator-=(Vec3 &A, Vec3 B)
+{
+    A = A - B;
+    return A;
 }
 
 Vec2 ProjectPoint(Vec3 Pos, uint32_t Width, uint32_t Height)
@@ -154,6 +187,15 @@ Mat4 Mat4::TranslationMatrix(float x, float y, float z)
     Result.v[3].x = x;
     Result.v[3].y = y;
     Result.v[3].z = z;
+    return Result;
+}
+
+Mat4 Mat4::TranslationMatrixFromVec3(Vec3 V)
+{
+    Mat4 Result = Mat4::Identity();
+    Result.v[3].x = V.x;
+    Result.v[3].y = V.y;
+    Result.v[3].z = V.z;
     return Result;
 }
 

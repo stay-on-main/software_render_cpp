@@ -2,8 +2,17 @@
 #include <cassert>
 #include <cmath>
 #include <cfloat>
+#include <iostream>
 #include <Windows.h>
 #include "graphics_math.h"
+
+typedef struct {
+    Vec3 Pos;
+    Vec2 PrevMousePos;
+    bool PrevMouseDown;
+    float Yaw;
+    float Picth;
+} Camera;
 
 typedef struct {
     HWND WindowHandle;
@@ -14,6 +23,11 @@ typedef struct {
     UINT32 *FrameBufferPixels;
     float *DepthBuffer;
     float CurrAngle;
+    bool KeyUp;
+    bool KeyDown;
+    bool KeyLeft;
+    bool KeyRight;
+    Camera Cam;
 } global_state;
 
 global_state GlobalState;
@@ -110,6 +124,31 @@ int WINAPI WinMain(
             case WM_QUIT:
                 GlobalState.IsRunning = false;
                 break;
+
+            case WM_KEYUP:
+            case WM_KEYDOWN: {
+                uint32_t VkCode = Message.wParam;
+                bool Pressed = (Message.lParam & (1 << 31)) == 0;
+
+                switch (VkCode) {
+                case 'W':
+                    GlobalState.KeyUp = Pressed;
+                    break;
+
+                case 'S':
+                    GlobalState.KeyDown = Pressed;
+                    break;
+
+                case 'A':
+                    GlobalState.KeyLeft = Pressed;
+                    break;
+
+                case 'D':
+                    GlobalState.KeyRight = Pressed;
+                    break;
+                }
+                break;
+            }
             
             default:
                 TranslateMessage(&Message);
@@ -132,6 +171,85 @@ int WINAPI WinMain(
 
                 GlobalState.DepthBuffer[PixelId] = FLT_MAX;
             }
+        }
+        
+        Mat4 CameraTransform = Mat4::Identity();
+        {
+            
+            
+            Vec2 CurrMousePos = Vec2::Create(0, 0);
+            bool MouseDown = false;
+            if (GetActiveWindow() == GlobalState.WindowHandle) {
+                POINT Win32MousePos;
+                assert(GetCursorPos(&Win32MousePos));
+                assert(ScreenToClient(GlobalState.WindowHandle, &Win32MousePos));
+
+                RECT ClientRect;
+                assert(GetClientRect(GlobalState.WindowHandle, &ClientRect));
+
+                Win32MousePos.y = ClientRect.bottom - Win32MousePos.y;
+
+                CurrMousePos.x = (float)Win32MousePos.x / (ClientRect.right - ClientRect.left);
+                CurrMousePos.y = (float)Win32MousePos.y / (ClientRect.bottom - ClientRect.top);
+
+                MouseDown = (GetKeyState(VK_LBUTTON) & 0x8000) != 0;
+            }
+
+            if (MouseDown) {
+                
+                if (!GlobalState.Cam.PrevMouseDown) {
+                    GlobalState.Cam.PrevMousePos = CurrMousePos;
+                }
+
+                Vec2 MouseDelta = CurrMousePos - GlobalState.Cam.PrevMousePos;
+                std::cout << "mouse delta (" << CurrMousePos.x << " " << CurrMousePos.y << ")" << std::endl;
+                GlobalState.Cam.Picth += MouseDelta.y;
+                GlobalState.Cam.Yaw += MouseDelta.x;
+
+                GlobalState.Cam.PrevMousePos = CurrMousePos;
+            }
+
+            GlobalState.Cam.PrevMouseDown = MouseDown;
+
+            Mat4 YawTransfrom = Mat4::RotationMatrix(0, GlobalState.Cam.Yaw, 0);
+            Mat4 PitchTransform = Mat4::RotationMatrix(GlobalState.Cam.Picth, 0, 0);
+            Mat4 CameraAxisTransfrom = PitchTransform * YawTransfrom;
+
+            Vec3 Right = (CameraAxisTransfrom * Vec4::Create(1, 0, 0, 0)).ToVec3().Normalize();
+            Vec3 Up = (CameraAxisTransfrom * Vec4::Create(0, 1, 0, 0)).ToVec3().Normalize();
+            Vec3 LookAt = (CameraAxisTransfrom * Vec4::Create(0, 0, 1, 0)).ToVec3().Normalize();
+
+            Mat4 CameraViewTransfrom = Mat4::Identity();
+
+            CameraViewTransfrom.v[0].x = Right.x;
+            CameraViewTransfrom.v[1].x = Right.y;
+            CameraViewTransfrom.v[2].x = Right.z;
+
+            CameraViewTransfrom.v[0].y = Up.x;
+            CameraViewTransfrom.v[1].y = Up.y;
+            CameraViewTransfrom.v[2].y = Up.z;
+
+            CameraViewTransfrom.v[0].z = LookAt.x;
+            CameraViewTransfrom.v[1].z = LookAt.y;
+            CameraViewTransfrom.v[2].z = LookAt.z;
+
+            if (GlobalState.KeyDown) {
+                GlobalState.Cam.Pos -= LookAt * FrameTime;
+            }
+
+            if (GlobalState.KeyUp) {
+                GlobalState.Cam.Pos += LookAt * FrameTime;
+            }
+
+            if (GlobalState.KeyLeft) {
+                GlobalState.Cam.Pos -= Right * FrameTime;
+            }
+
+            if (GlobalState.KeyRight) {
+                GlobalState.Cam.Pos += Right * FrameTime;
+            }
+        
+            CameraTransform = CameraViewTransfrom * Mat4::TranslationMatrixFromVec3(-GlobalState.Cam.Pos);
         }
 
         GlobalState.CurrAngle += FrameTime;
@@ -169,10 +287,10 @@ int WINAPI WinMain(
             // Front face
             0, 1, 2,
             2, 3, 0,
-        //    // Back face
+            // Back face
             6, 5, 4,
             4, 7, 6,
-        //    // Left face
+            // Left face
             4, 5, 1,
             1, 0, 4,
             // Right face
@@ -187,7 +305,8 @@ int WINAPI WinMain(
         };
 
         float Offset = GlobalState.CurrAngle;
-        Mat4 Transform = Mat4::TranslationMatrix(0.0f, 0.0f, 4.0f) *
+        Mat4 Transform = CameraTransform *
+                         Mat4::TranslationMatrix(0.0f, 0.0f, 4.0f) *
                          Mat4::RotationMatrix(Offset, Offset, Offset) *
                          Mat4::ScaleMatrix(1.0f, 1.0f, 1.0f);
 

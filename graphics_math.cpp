@@ -261,10 +261,16 @@ void DrawTriangle(
     int32_t MaxY = std::max(std::max(round(PointA.y), round(PointB.y)), round(PointC.y));
 
     MinX = std::max(0, MinX);
+    MinX = std::min((int32_t)(Width - 1), MinX);
+
     MinY = std::max(0, MinY);
+    MinY = std::min((int32_t)(Height - 1), MinY);
 
     MaxX = std::min((int32_t)(Width - 1), MaxX);
+    MaxX = std::max(0, MaxX);
+
     MaxY = std::min((int32_t)(Height - 1), MaxY);
+    MaxY = std::max(0, MaxY);
 
     for (uint32_t Y = MinY; Y <= MaxY; ++Y) {
         for (uint32_t X = MinX; X <= MaxX; ++X) {

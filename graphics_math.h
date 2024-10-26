@@ -18,6 +18,7 @@ class Vec3 {
 
         static Vec3 Create(float x, float y, float z);
         Vec3 Normalize();
+        Vec2 ToVec2();
 };
 
 class Vec4 {
@@ -41,6 +42,7 @@ class Mat4 {
         static Mat4 TranslationMatrix(float x, float y, float z);
         static Mat4 TranslationMatrixFromVec3(Vec3 V);
         static Mat4 RotationMatrix(float x, float y, float z);
+        static Mat4 PrespectiveMatrix(float Fov, float AspectRation, float NearZ, float FarZ);
 };
 
 Vec2 operator-(Vec2 A, Vec2 B);

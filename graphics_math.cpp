@@ -1,6 +1,7 @@
 #include "graphics_math.h"
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 Vec2 Vec2::Create(float x, float y) {
     Vec2 v = {};
@@ -48,6 +49,11 @@ Vec3 Vec3::Normalize()
     return Vec3::Create(this->x, this->y, this->z) / Len;
 }
 
+Vec2 Vec3::ToVec2()
+{
+    return Vec2::Create(this->x, this->y);
+}
+
 Vec3 operator+(Vec3 A, Vec3 B)
 {
     return Vec3::Create(A.x + B.x, A.y + B.y, A.z + B.z);
@@ -90,10 +96,9 @@ Vec3 operator-=(Vec3 &A, Vec3 B)
     return A;
 }
 
-Vec2 ProjectPoint(Vec3 Pos, uint32_t Width, uint32_t Height)
+Vec2 NdcToPixels(Vec2 Pos, uint32_t Width, uint32_t Height)
 {
-    Vec2 Result = Vec2::Create(Pos.x, Pos.y) / Pos.z;
-    Result = 0.5 * (Result + Vec2::Create(1.0, 1.0)) * Vec2::Create(Width, Height);
+    Vec2 Result = 0.5 * (Pos + Vec2::Create(1.0, 1.0)) * Vec2::Create(Width, Height);
     return Result;
 }
 
@@ -223,6 +228,19 @@ Mat4 Mat4::RotationMatrix(float x, float y, float z)
     return RotateX * RotateY * RotateZ;
 }
 
+/// Fov in degrees
+Mat4 Mat4::PrespectiveMatrix(float Fov, float AspectRation, float NearZ, float FarZ)
+{
+    Mat4 Result = {};
+    float FovRadians = (Fov / 360.0f) * 2.0f * PI_32;
+    Result.v[0].x = 1.0f / (AspectRation * tan(FovRadians * 0.5f));
+    Result.v[1].y = 1.0f / tan(FovRadians * 0.5f);
+    Result.v[2].z = -FarZ / (NearZ - FarZ);
+    Result.v[3].z = (NearZ * FarZ) / (NearZ - FarZ);
+    Result.v[2].w = 1.0f;
+    return Result;
+}
+
 void DrawTriangle(
     Vec3 Point0,
     Vec3 Point1,
@@ -236,13 +254,17 @@ void DrawTriangle(
     float *DepthBuffer,
     Mat4 Transform)
 {
-    Vec3 TransformPoint0 = (Transform * Vec4::FromPoint(Point0)).ToVec3();
-    Vec3 TransformPoint1 = (Transform * Vec4::FromPoint(Point1)).ToVec3();
-    Vec3 TransformPoint2 = (Transform * Vec4::FromPoint(Point2)).ToVec3();
+    Vec4 TransformPoint0 = Transform * Vec4::FromPoint(Point0);
+    Vec4 TransformPoint1 = Transform * Vec4::FromPoint(Point1);
+    Vec4 TransformPoint2 = Transform * Vec4::FromPoint(Point2);
 
-    Vec2 PointA = ProjectPoint(TransformPoint0, Width, Height);
-    Vec2 PointB = ProjectPoint(TransformPoint1, Width, Height);
-    Vec2 PointC = ProjectPoint(TransformPoint2, Width, Height);
+    Vec3 TransNormPoint0 = TransformPoint0.ToVec3() / TransformPoint0.w;
+    Vec3 TransNormPoint1 = TransformPoint1.ToVec3() / TransformPoint1.w;
+    Vec3 TransNormPoint2 = TransformPoint2.ToVec3() / TransformPoint2.w;
+
+    Vec2 PointA = NdcToPixels(TransNormPoint0.ToVec2(), Width, Height);
+    Vec2 PointB = NdcToPixels(TransNormPoint1.ToVec2(), Width, Height);
+    Vec2 PointC = NdcToPixels(TransNormPoint2.ToVec2(), Width, Height);
 
     Vec2 Edge0 = PointB - PointA;
     Vec2 Edge1 = PointC - PointB;
@@ -291,16 +313,15 @@ void DrawTriangle(
                 // Pixel inside triangle
                 uint32_t PixelId = Y * Width + X;
 
-                float T0 = - CrossLength1 / BaryCentricDiv;
-                float T1 = - CrossLength2 / BaryCentricDiv;
-                float T2 = - CrossLength0 / BaryCentricDiv;
+                float T0 = -CrossLength1 / BaryCentricDiv;
+                float T1 = -CrossLength2 / BaryCentricDiv;
+                float T2 = -CrossLength0 / BaryCentricDiv;
 
-                float Depth = T0 * (1.0f / TransformPoint0.z) +
-                              T1 * (1.0f / TransformPoint1.z) +
-                              T2 * (1.0f / TransformPoint2.z); 
-                Depth = 1.0f / Depth;
+                float Depth = T0 * TransNormPoint0.z +
+                              T1 * TransNormPoint1.z +
+                              T2 * TransNormPoint2.z; 
 
-                if (Depth < DepthBuffer[PixelId]) {
+                if (Depth >= 0 && Depth <= 1.0f && Depth < DepthBuffer[PixelId]) {
                     DepthBuffer[PixelId] = Depth;
 
                     Vec3 FinalColor = T0 * Color0 + T1 * Color1 + T2 * Color2;

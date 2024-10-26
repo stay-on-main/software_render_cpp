@@ -173,10 +173,16 @@ int WINAPI WinMain(
             }
         }
         
+                RECT ClientRect = {};
+
+        assert(GetClientRect(GlobalState.WindowHandle, &ClientRect));
+
+        UINT32 ClientWidth = ClientRect.right - ClientRect.left;
+        UINT32 ClientHeight = ClientRect.bottom - ClientRect.top;
+        float AspectRatio = (float)ClientWidth / (float)ClientHeight;
+
         Mat4 CameraTransform = Mat4::Identity();
         {
-            
-            
             Vec2 CurrMousePos = Vec2::Create(0, 0);
             bool MouseDown = false;
             if (GetActiveWindow() == GlobalState.WindowHandle) {
@@ -184,13 +190,10 @@ int WINAPI WinMain(
                 assert(GetCursorPos(&Win32MousePos));
                 assert(ScreenToClient(GlobalState.WindowHandle, &Win32MousePos));
 
-                RECT ClientRect;
-                assert(GetClientRect(GlobalState.WindowHandle, &ClientRect));
-
                 Win32MousePos.y = ClientRect.bottom - Win32MousePos.y;
 
-                CurrMousePos.x = (float)Win32MousePos.x / (ClientRect.right - ClientRect.left);
-                CurrMousePos.y = (float)Win32MousePos.y / (ClientRect.bottom - ClientRect.top);
+                CurrMousePos.x = (float)Win32MousePos.x / (float)ClientWidth;
+                CurrMousePos.y = (float)Win32MousePos.y / (float)ClientHeight;
 
                 MouseDown = (GetKeyState(VK_LBUTTON) & 0x8000) != 0;
             }
@@ -305,7 +308,9 @@ int WINAPI WinMain(
         };
 
         float Offset = GlobalState.CurrAngle;
-        Mat4 Transform = CameraTransform *
+
+        Mat4 Transform = Mat4::PrespectiveMatrix(60.0f, AspectRatio, 1.0f, 6.f) *
+                         CameraTransform *
                          Mat4::TranslationMatrix(0.0f, 0.0f, 4.0f) *
                          Mat4::RotationMatrix(Offset, Offset, Offset) *
                          Mat4::ScaleMatrix(1.0f, 1.0f, 1.0f);
@@ -325,13 +330,6 @@ int WINAPI WinMain(
                 Transform
             );
         }
-
-        RECT ClientRect = {};
-
-        assert(GetClientRect(GlobalState.WindowHandle, &ClientRect));
-
-        UINT32 ClientWidth = ClientRect.right - ClientRect.left;
-        UINT32 ClientHeight = ClientRect.bottom - ClientRect.top;
 
         BITMAPINFO BitmapInfo = {};
         
